@@ -151,16 +151,17 @@ def plot_mttbar(argv) :
     h_AK4Bdisc.Sumw2()
     h_drAK4AK8.Sumw2()
     h_drLepAK4.Sumw2()
-<<<<<<< HEAD
     h_AK8E.Sumw2()
     h_AK8bDiscB.Sumw2()
     h_AK8bDiscW.Sumw2()
     h_AK8sj_bm.Sumw2()
     h_AK8sj_Wm.Sumw2()
     
-=======
     h_dPhiLepAK8.Sumw2()
     h_nvertex.Sumw2()
+    h_AK8Tau32PreSel.Sumw2()
+	h_AK8Tau21PreSel.Sumw2()
+	h_AK4BdiscPreSel.Sumw2()
 
     # Invariant mass calculation
     def calculate_invariant_m():
@@ -179,7 +180,6 @@ def plot_mttbar(argv) :
         mttbar = ttbarCand.M()
         return mttbar
 
->>>>>>> 192847445957fb2cdc8b0b019adbf0547b73ef68
     fin = ROOT.TFile.Open(options.file_in)
 
     trees = [ fin.Get("TreeSemiLept") ]
@@ -377,7 +377,7 @@ def plot_mttbar(argv) :
             # MET
             nuCandP4 = ROOT.TLorentzVector( )
             nuCandP4.SetPtEtaPhiM( SemiLepMETpt[0], 0, SemiLepMETphi[0], SemiLepMETpt[0] )
-            # Leptoon
+            # Lepton
             theLepton = ROOT.TLorentzVector()
             theLepton.SetPtEtaPhiE( LeptonPt[0], LeptonEta[0], LeptonPhi[0], LeptonEnergy[0] ) # Assume massless
 
