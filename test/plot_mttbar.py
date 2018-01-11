@@ -12,6 +12,16 @@ import array as array
 from optparse import OptionParser
 import numpy as np
 
+#declare cut values
+tau32_cut = 0.9 
+mass_sdHigh = 250.
+mass_sdLow  = 110.
+LeptonPtRel_cut = 20.
+bdisc_cut = 0.7
+LeptonDRMin_cut = 0.4
+hadTopCandP4Perp_cut = 100.
+#write to temp file
+fh = open("ttbar_bkg.txt", "a")
 
 def plot_mttbar(argv) :
     parser = OptionParser()
@@ -27,28 +37,42 @@ def plot_mttbar(argv) :
     parser.add_option('--jer', type='string', action='store',
                       dest='jer',
                       default = None,
-                      help='Choice of up and down for Jet Energy Resolution (only set jer or jec')
+                      help='Choice of up and down for Jet Energy Resolution (only set jer or jec or sf')
 
     parser.add_option('--jec', type='string', action='store',
                       dest='jec',
                       default = None,
-                      help='Choice of up and down for Jet Energy Correction (only set jer or jec')
+                      help='Choice of up and down for Jet Energy Correction (only set jer or jec or sf')
+
+    parser.add_option('--sf', type='string', action='store',
+                      dest='sf',
+                      default = None,
+                      help='Choice of up and down for scale factor (Only set jer or jec or sf')
     
     parser.add_option('--lepton', type='string', action='store',
 	                  dest='lepton',
 					  default='mu',
-                      help='Choice of lepton (mu or ele)')
+                      help='Choice of lepton (mu or el)')
 					  
+    parser.add_option('--sig', action='store_true',
+	                  dest='isSignal',
+					  default=False,
+                      help='Choice of signal or background (True or False)')
     parser.add_option('--isData', action='store_true',
                       dest='isData',
                       default = False,
                       help='Is this Data?')
         
+    parser.add_option('--pileup',type='string',  action='store',
+                      dest='pileup',
+                      default = None,
+                      help='Choice for pileup cros section shift')
+    
     (options, args) = parser.parse_args(argv)
     argv = []
     
     #write to temp file
-    #fh = open("num.txt", "a")
+    fh = open("num.txt", "a")
 
     #print '===== Command line options ====='
     #print options
@@ -60,7 +84,7 @@ def plot_mttbar(argv) :
 
     histogramSuffix = ''
     #Adding name change to histograms based on --jec options and --jer options
-    if options.lepton == 'ele':
+    if options.lepton == 'el':
         histogramSuffix = '_el'
     if options.lepton == 'mu':
         histogramSuffix = '_mu'
@@ -80,12 +104,31 @@ def plot_mttbar(argv) :
     if options.jer == 'down' :
 	    histogramSuffix += '_jer_Down'
 
-    #fpileup = ROOT.TFile.Open('purw.root', 'read')
-    #h_pileupWeight = fpileup.Get('pileup') 
+    if options.sf == 'up' :
+        histogramSuffix += '_sf_Up'
+
+    if options.sf == 'down' :
+        histogramSuffix += '_sf_Down'
+
+    if options.pileup == None:
+    	fpileup = ROOT.TFile.Open('purw.root', 'read')
+               
+    if options.pileup == "up":
+	    fpilup = ROOT.TFile.Open('purw_up.root','read')
+        histogramSuffix += '_pileup_Up'
+
+    if options.pileup == "down":
+	    fpileup = ROOT.TFile.Open('purw_down.root','read')
+        histogramSuffix += '_pileup_Down'
+    
+    h_pileupWeight = fpileup.Get('pileup')
+
+    if options.isSignal:
+        print "this is signal"
 
     fout= ROOT.TFile(options.file_out, "RECREATE")
     fout.cd()
-    h_cuts = ROOT.TH1F("Cut_flow", "", 4,0,4)
+    h_cuts = ROOT.TH1F("Cut_flow", "", 5,0,5)
 
     h_mttbar = ROOT.TH1F("h_mttbar"+histogramSuffix, ";m_{t#bar{t}} (GeV);Number", 100, 0, 5000)#invariant ttbar mass
     h_mttbar_control = ROOT.TH1F("h_mttbar_control"+histogramSuffix, ";m_{t#bar{t}} (GeV);Number", 100, 0, 5000)#invariant ttbar mass
@@ -103,8 +146,8 @@ def plot_mttbar(argv) :
     h_AK8Eta = ROOT.TH1F("h_AK8Eta"+histogramSuffix, ";AK8_{#eta} ;Number", 100, -2.5, 2.5)
     h_AK8Phi = ROOT.TH1F("h_AK8Phi"+histogramSuffix, ";AK8_{#phi} ;Number", 100, -3.5, 3.5)
     h_AK8Tau32 = ROOT.TH1F("h_AK8Tau32"+histogramSuffix,";AK8_{#tau_{32}};Number", 50, 0.0, 1.0)
-    h_AK8Tau32PreSel = ROOT.TH1F("h_AK8Tau32PreSel"+histogramSuffix,";AK8_{#tau_{32}};Number", 50, 0.0, 1.0)
     h_AK8Tau21 = ROOT.TH1F("h_AK8Tau21"+histogramSuffix,";AK8_{#tau_{21}};Number", 50, 0.0, 1.0)
+    h_AK8Tau32PreSel = ROOT.TH1F("h_AK8Tau32PreSel"+histogramSuffix,";AK8_{#tau_{32}};Number", 50, 0.0, 1.0)
     h_AK8Tau21PreSel = ROOT.TH1F("h_AK8Tau21PreSel"+histogramSuffix,";AK8_{#tau_{21}};Number", 50, 0.0, 1.0)
     
 	#AK8
@@ -115,15 +158,11 @@ def plot_mttbar(argv) :
     h_AK4Bdisc = ROOT.TH1F("h_AK4Bdisc"+histogramSuffix,";ak4jet_{bdisc};Number", 100, 0, 1.0)
     h_AK4BdiscPreSel = ROOT.TH1F("h_AK4BdiscPreSel"+histogramSuffix,";ak4jet_{bdisc};Number", 100, 0, 1.0)
 
-
     h_drAK4AK8    = ROOT.TH1F("h_drAK4AK8"+histogramSuffix,";#DeltaR_{AK4, AK8} ;Number", 100, 0, 5)
-#    h_drLepAK8    = ROOT.TH1F("h_drLepAK8",";{#delta r}_{lep, AK8} ;Number", 100, 0, 1500)
     h_drLepAK4    = ROOT.TH1F("h_drLepAK4"+histogramSuffix,";#DeltaR_{lep, AK4} ;Number", 100, 0, 5)
-
     h_dPhiLepAK8 = ROOT.TH1F("h_dPhiLepAK8"+histogramSuffix,";#Delta#phi_{l,AK8};Number", 100, 0.0, 1.0)
     # vertex info
     h_nvertex = ROOT.TH1F("h_nvertex"+histogramSuffix,"Nvertices;nvertex;Number", 100, 0.0, 100)
-
 
     # More histograms that show large discrepencies between signal (rsg_3000) and bkgd (ttbar_ALL)
     h_AK8E			= ROOT.TH1F("h_AK8E"+histogramSuffix, ";AK8_{E} (GeV);Number", 300, 0.0, 5000)
@@ -156,7 +195,6 @@ def plot_mttbar(argv) :
     h_AK8bDiscW.Sumw2()
     h_AK8sj_bm.Sumw2()
     h_AK8sj_Wm.Sumw2()
-    
     h_dPhiLepAK8.Sumw2()
     h_nvertex.Sumw2()
     h_AK8Tau32PreSel.Sumw2()
@@ -362,7 +400,7 @@ def plot_mttbar(argv) :
                 if SemiLeptTrig[0] == 0  :
                     continue
 
-            if options.lepton=='ele' :
+            if options.lepton=='el' :
                 if LeptonType[0] != 11 :
                     continue
                 # Muon triggers only for now (use HLT_Ele50_CaloIdVT_GsfTrkIdT_PFJet165 with index 1 and HLT_Ele115_CaloIdVT_GsfTrkIdT with index 2)
@@ -386,9 +424,20 @@ def plot_mttbar(argv) :
             bdisc = NearestAK4JetBDisc[0]
             
             #Weights
-            pileupWeight=  h_pileupWeight.GetBinContent(SemiLepNvtx[0]+1)
-            weight = pileupWeight
-            if options.isData: weight =1
+            SF_el = 0.932359021363 #1.0725482106
+            SF_el_err = 0.00780381551305 #0.008977194592
+            SF_mu = 0.767789999645 #1.30243946973
+            SF_mu_err = 0.00564946788104 #0.0095834667743
+            weight=  h_pileupWeight.GetBinContent(SemiLepNvtx[0]+1)
+            
+            if options.lepton =='mu' and options.sf =='up': weight*(SF_mu+SF_mu_err)
+            if options.lepton =='el' and options.sf =='up': weight*(SF_el+SF_el_err)
+            if options.lepton =='mu' and options.sf =='down': weight*(SF_mu-SF_mu_err)
+            if options.lepton =='el' and options.sf =='down': weight*(SF_el-SF_el_err)
+            if options.lepton =='mu': weight*(SF_mu)
+            if options.lepton =='el': weight*(SF_el)
+
+            if options.isData: weight = 1
             if options.jec =='up':
                 hadTopCandP4 *= FatJetJECUpSys[0]
                 bJetCandP4 *= NearestAK4JetJECUpSys[0]
@@ -407,10 +456,10 @@ def plot_mttbar(argv) :
             h_AK8Tau32PreSel.Fill( FatJetTau32[0], weight )
             h_AK8Tau21PreSel.Fill( FatJetTau21[0], weight )
 
-            passKin = hadTopCandP4.Perp() > 100.
-            passTopTag = tau32 < 0.8 and mass_sd > 110. and mass_sd < 250.
-            pass2DCut = LeptonPtRel[0] > 20. or LeptonDRMin[0] > 0.4
-            passBtag = bdisc > 0.7
+            passKin = hadTopCandP4.Perp() > hadTopCandP4Perp_cut
+            passTopTag = tau32 < tau32_cut and mass_sd > mass_sdLow  and mass_sd < mass_sdHigh
+            pass2DCut = LeptonPtRel[0] > LeptonPtRel_cut or LeptonDRMin[0] > LeptonDRMin_cut
+            passBtag = bdisc > bdisc_cut
 
             # Applying and counting cuts
             if not passKin: 
@@ -490,19 +539,27 @@ def plot_mttbar(argv) :
             h_nvertex.Fill(SemiLepNvtx[0],weight )
 
     # Fill cut-flow
-    h_cuts.SetBinContent(1, cut1)
-    h_cuts.SetBinContent(2, cut2)
-    h_cuts.SetBinContent(3, cut3)
-    h_cuts.SetBinContent(4, cut4)
-    h_cuts.GetXaxis().SetBinLabel(1, "passKin")
-    h_cuts.GetXaxis().SetBinLabel(2, "pass2DCut" )
-    h_cuts.GetXaxis().SetBinLabel(3, "passBtag")
-    h_cuts.GetXaxis().SetBinLabel(4, "passTopTag")
+    h_cuts.SetBinContent(1, tot_entries)
+    h_cuts.SetBinContent(2, cut1)
+    h_cuts.SetBinContent(3, cut2)
+    h_cuts.SetBinContent(4, cut3)
+    h_cuts.SetBinContent(5, cut4)
+    h_cuts.GetXaxis().SetBinLabel(1, "total")
+    h_cuts.GetXaxis().SetBinLabel(2, "passKin")
+    h_cuts.GetXaxis().SetBinLabel(3, "pass2DCut" )
+    h_cuts.GetXaxis().SetBinLabel(4, "passBtag")
+    h_cuts.GetXaxis().SetBinLabel(5, "passTopTag")
 
-    control_eff = float(eff_pass)/float(tot_entries)
+    control_pass = float(eff_pass)#/float(tot_entries)
     print options.file_out, " : ", count, "/", tot_entries, ", Percentage:", round(float(count)/(float(tot_entries+1))*100,3), "%", \
-     "Cut_flow: [", cut1, cut2, cut3, cut4, "]", " Control Efficiency:", control_eff
+     "Cut_flow: [", cut1, cut2, cut3, cut4, "]", " Control Efficiency:", control_pass
 
+    nm = options.file_in
+    #fh.write(nm[71:])
+    fh.write(options.file_in)
+    fh.write(" "+str(count)+" "+str(tau32_cut)+" "+str(mass_sdLow)+" "+str(mass_sdHigh)+" "+str(LeptonPtRel_cut)+" "+str(LeptonDRMin_cut)+" "+str(hadTopCandP4Perp_cut)+" "+str(bdisc_cut))
+    fh.write('\n')
+    fh.close
     #fh.write(options.file_in)
     #fh.close
 
@@ -510,7 +567,7 @@ def plot_mttbar(argv) :
     fout.Write()
     fout.Close()
     
-    return control_eff
+    return control_pass
 
 if __name__ == "__main__" :
     control_eff = plot_mttbar(sys.argv)
